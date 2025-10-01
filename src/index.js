@@ -5,12 +5,31 @@
 
 import dotenv from "dotenv";
 import connectDB from "./db/index.js";
+import app from "./app.js";
 
 dotenv.config({
     path: "./.env"
 });
 
-connectDB();
+// Connect to the database
+// Using .then and .catch to handle the promise returned by connectDB
+connectDB()
+.then(() => {
+    // what is the use of app.on - to handle errors globally in the app 
+    app.on("error", (error) => {
+        console.error("Error: ", error);
+        throw error;
+    });
+
+    // Start the server only after successful DB connection
+    app.listen(process.env.PORT || 8000, () => {
+        console.log(`Server started at http://localhost:${process.env.PORT || 8000}`);
+    });
+})
+.catch((error) => {
+    console.error("Failed to connect to DB:", error);
+    process.exit(1); // Exit the process with failure
+});
 
 
 
