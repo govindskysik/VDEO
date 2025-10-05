@@ -202,5 +202,124 @@ const refreshToken = asyncHandler(async (req, res) => {
 
 });
 
+const changePassword = asyncHandler(async (req, res) => {
+    // get old password and new password from req.body
+    // validation - not empty
+    // find user by id from req.user
+    // compare old password
+    // if match, hash new password and save to db
+    // send response
 
-export { registerUser, loginUser, logoutUser, refreshToken };
+    const { oldPassword, newPassword } = req.body;
+
+    if ([oldPassword, newPassword].some((field) => field.trim() === '')) {
+        throw new APIError(400, "All fields are required");
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+        throw new APIError(404, "User not found");
+    }
+
+    const isOldPasswordValid = await user.isPasswordCorrect(oldPassword);
+    if (!isOldPasswordValid) {
+        throw new APIError(401, "Old password is incorrect");
+    }
+
+    user.password = newPassword; // this will be hashed in pre-save hook
+    await user.save();
+
+    return res.status(200).json(new APIResponse(200, "Password changed successfully"));
+});
+
+const getUserProfile = asyncHandler(async (req, res) => {
+    res.status(200).json({ message: "User profile", user: req.user });
+});
+
+const getAllUsers = asyncHandler(async (req, res) => {
+    const users = await User.find().select("-password -refreshToken");
+    res.status(200).json(new APIResponse(200, "Users fetched successfully", users));
+});
+
+const deleteUser = asyncHandler(async (req, res) => {
+    const userId = req.params.id;
+    await User.findByIdAndDelete(userId);
+    res.status(200).json(new APIResponse(200, "User deleted successfully"));
+});
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+    // get user details from frontend
+    // validation - not empty
+    // check if user already exists - username, email should be unique
+
+    const { fullName, username, email } = req.body;
+    if([username, email].some((field) => field.trim() === '')) {
+        throw new Error(400, "Username and email are required");
+    }
+
+    const existingUser = await User.findByIdAndUpdate(req.user._id, {
+        $set: { fullName, username, email }
+    },
+        { new: true } // return the updated document
+    ).select("-password -refreshToken");
+
+    if (!existingUser) {
+        throw new APIError(500, "User update failed");
+    }
+
+    return res.status(200).json(new APIResponse(200, "User updated successfully", existingUser));
+});
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+    const avatarLocalFilePath = req.file?.path;
+
+    if (!avatarLocalFilePath) {
+        throw new APIError(400, "Avatar is required");
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalFilePath);
+    if (!avatar.url) {
+        throw new APIError(500, "Avatar upload failed");
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, {
+        $set: { avatar: avatar.url }
+    },
+        { new: true } // return the updated document
+    ).select("-password -refreshToken");
+
+    if (!updatedUser) {
+        throw new APIError(500, "User avatar update failed");
+    }
+
+    return res.status(200).json(new APIResponse(200, "User avatar updated successfully", updatedUser));
+});
+
+const updateCoverImage = asyncHandler(async (req, res) => {
+    const coverImageLocalFilePath = req.file?.path;
+
+    if (!coverImageLocalFilePath) {
+        throw new APIError(400, "Cover image is required");
+    }
+
+    const coverImage = await uploadOnCloudinary(coverImageLocalFilePath);
+    if (!coverImage.url) {
+        throw new APIError(500, "Cover image upload failed");
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, {
+        $set: { coverImage: coverImage.url }
+    },
+        { new: true } // return the updated document
+    ).select("-password -refreshToken");
+
+    if (!updatedUser) {
+        throw new APIError(500, "User cover image update failed");
+    }
+
+    return res.status(200).json(new APIResponse(200, "User cover image updated successfully", updatedUser));
+});
+
+
+export { registerUser, loginUser, logoutUser, refreshToken, changePassword, getUserProfile, getAllUsers, deleteUser, updateAccountDetails, updateUserAvatar, updateCoverImage };

@@ -13,10 +13,14 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
             throw new APIError(401, "Unauthorized - No token provided");
         }
 
+        // console.log("Token:", token); // Debugging line to check the token value
+
         const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
         if(!decoded) {
             throw new APIError(401, "Unauthorized - Invalid token");
         }
+
+        // console.log("Decoded JWT:", decoded); // Debugging line to check the decoded token
 
         const user = await User.findById(decoded?._id).select("-password -refreshToken");
         if(!user) {
