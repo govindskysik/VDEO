@@ -23,6 +23,7 @@ app.use(express.urlencoded({
 
 app.use(express.static('public')); // Serve static files from the 'public' directory
 
+// It will give us access to cookies in req.cookies
 app.use(cookieParser()); // Parse cookies from incoming requests
 
 // Routes import
